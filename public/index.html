@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Nifty 200 EMA20 Scanner</title>
+  <meta name="description" content="Real-time scanner for Nifty 200 stocks that are significantly above or below their 20-day Exponential Moving Average." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- Background decoration -->
+  <div class="bg-orb bg-orb-1"></div>
+  <div class="bg-orb bg-orb-2"></div>
+  <div class="bg-orb bg-orb-3"></div>
+
+  <div class="app-container">
+    <!-- Header -->
+    <header class="app-header">
+      <div class="header-left">
+        <div class="logo">
+          <span class="logo-icon">📈</span>
+          <div>
+            <h1 class="app-title">Nifty 200 EMA20 Scanner</h1>
+            <p class="app-subtitle">Find stocks deviating significantly from their 20-day EMA</p>
+          </div>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="last-updated" id="lastUpdated">—</div>
+        <button class="refresh-btn" id="refreshBtn" onclick="loadData()">
+          <svg id="refreshIcon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+          Refresh
+        </button>
+      </div>
+    </header>
+
+    <!-- Controls -->
+    <section class="controls-section">
+      <div class="controls-card">
+        <!-- Direction Toggle -->
+        <div class="control-group">
+          <label class="control-label">Filter Direction</label>
+          <div class="toggle-group" id="directionToggle">
+            <button class="toggle-btn active" id="btnAbove" onclick="setDirection('above')">
+              <span class="toggle-arrow">▲</span>
+              Above EMA20
+            </button>
+            <button class="toggle-btn" id="btnBelow" onclick="setDirection('below')">
+              <span class="toggle-arrow">▼</span>
+              Below EMA20
+            </button>
+            <button class="toggle-btn" id="btnBoth" onclick="setDirection('both')">
+              <span class="toggle-arrow">⇅</span>
+              Both
+            </button>
+          </div>
+        </div>
+
+        <!-- Deviation Slider -->
+        <div class="control-group">
+          <label class="control-label">
+            Minimum Deviation
+            <span class="deviation-badge" id="deviationLabel">2.0%</span>
+          </label>
+          <div class="slider-container">
+            <span class="slider-hint">0%</span>
+            <input
+              type="range"
+              id="deviationSlider"
+              min="0"
+              max="20"
+              step="0.5"
+              value="2"
+              oninput="onSliderChange(this.value)"
+            />
+            <span class="slider-hint">20%</span>
+            <input
+              type="number"
+              id="deviationInput"
+              min="0"
+              max="100"
+              step="0.5"
+              value="2"
+              oninput="onInputChange(this.value)"
+            />
+            <span class="slider-hint">%</span>
+          </div>
+        </div>
+
+        <!-- Stats row -->
+        <div class="stats-strip" id="statsStrip">
+          <div class="stat-chip" id="statShowing">
+            <span class="stat-num" id="statCount">—</span>
+            <span class="stat-desc">Stocks Shown</span>
+          </div>
+          <div class="stat-chip">
+            <span class="stat-num" id="statAbove">—</span>
+            <span class="stat-desc">Above EMA20</span>
+          </div>
+          <div class="stat-chip">
+            <span class="stat-num" id="statBelow">—</span>
+            <span class="stat-desc">Below EMA20</span>
+          </div>
+          <div class="stat-chip">
+            <span class="stat-num" id="statTotal">—</span>
+            <span class="stat-desc">Total Loaded</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Main content -->
+    <main class="main-content">
+      <!-- Loading state -->
+      <div class="loading-state" id="loadingState">
+        <div class="spinner"></div>
+        <p class="loading-text">Fetching Nifty 200 data from Yahoo Finance…</p>
+        <p class="loading-sub" id="loadingProgress">This may take 45–60 seconds</p>
+      </div>
+
+      <!-- Error state -->
+      <div class="error-state hidden" id="errorState">
+        <div class="error-icon">⚠️</div>
+        <p class="error-text" id="errorText">Failed to load stock data.</p>
+        <button class="refresh-btn" onclick="loadData()">Try Again</button>
+      </div>
+
+      <!-- Results table -->
+      <div class="table-wrapper hidden" id="tableWrapper">
+        <div class="empty-state hidden" id="emptyState">
+          <div class="empty-icon">🔍</div>
+          <p>No stocks match your current filter criteria.</p>
+          <p class="empty-sub">Try lowering the minimum deviation percentage.</p>
+        </div>
+        <table class="stocks-table" id="stocksTable">
+          <thead>
+            <tr>
+              <th class="th-rank">#</th>
+              <th class="th-symbol">Stock</th>
+              <th class="th-price">Price (₹)</th>
+              <th class="th-ema">EMA20 (₹)</th>
+              <th class="th-dev">Deviation</th>
+              <th class="th-spark">Trend (30d)</th>
+            </tr>
+          </thead>
+          <tbody id="stocksTableBody">
+          </tbody>
+        </table>
+      </div>
+    </main>
+
+    <footer class="app-footer">
+      <p>Data sourced from Yahoo Finance · EMA calculated over 20 trading days · Prices in INR</p>
+    </footer>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
