@@ -186,7 +186,7 @@ async function loadData() {
     }, 1000);
 
     try {
-        const res = await fetch('/api/stocks');
+        const res = await fetch('/.netlify/functions/ema-filter');
         clearInterval(countdown);
         if (!res.ok) throw new Error(`Server responded with ${res.status}`);
         const data = await res.json();
